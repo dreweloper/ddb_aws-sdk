@@ -1,14 +1,39 @@
 const express = require('express');
+const cors = require('cors');
+const { ListTablesCommand } = require('@aws-sdk/client-dynamodb');
+const db = require('./src/config/db');
 require('dotenv').config();
 
 // App init
 const app = express();
 
-// Routes
-app.get('/', (req, res) => {
+// Cors middleware
+app.use(cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE']
+}));
 
-    res.send('Hello from app.js!');
-    
+// Routes
+app.get('/', async (req, res, next) => {
+
+    try {
+
+        const command = new ListTablesCommand({});
+
+        const response = await db.send(command);
+
+        if (response['$metadata'].httpStatusCode === 200) {
+
+            res.status(200).json(response);
+
+        };
+
+    } catch (error) {
+
+        next(error);
+
+    };
+
 });
 
 // Default error handler
@@ -16,7 +41,11 @@ app.use((err, req, res, next) => {
 
     console.error(err);
 
-    res.status(500).send('Internal server error.');
+    if (!res.headersSent) {
+
+        res.status(500).send('Internal server error.');
+
+    };
 
 });
 
@@ -24,4 +53,4 @@ app.use((err, req, res, next) => {
 const port = process.env.PORT || 3000;
 
 // Run the server
-const server = app.listen(port, () => console.log(`App listening on port ${port}`));
+app.listen(port, () => console.log(`App listening on port ${port}`));
